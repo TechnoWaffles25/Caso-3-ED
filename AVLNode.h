@@ -1,4 +1,4 @@
-#include "structLibro.h"
+#include "structBook.h"
 
 struct AVLNode {
     Book book;

@@ -1,83 +1,42 @@
 #include <iostream>
-#include <string>
-#include <cstring>
-#include <winsock2.h>
-#include "chatGPT.h"
+#include "json.hpp"
+#include "cpp-httplib-master/httplib.h"
+using json = nlohmann::json;
 
-#pragma comment(lib, "ws2_32.lib") // Enlazar con la librería Winsock
-
-const int PORT = 8080;
-
-class RestServer {
+// Define la clase ChatGPT (asegúrate de definirla correctamente)
+class ChatGPT {
 public:
-    RestServer(chatGPT& chatGPTInstance) : chatGPT(chatGPTInstance) {}
-
-    void start() {
-        WSADATA wsaData;
-        if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-            std::cerr << "Error al inicializar Winsock" << std::endl;
-            return;
-        }
-
-        int serverSocket, newSocket;
-        struct sockaddr_in serverAddr;
-        struct sockaddr_storage serverStorage;
-        socklen_t addr_size;
-        char buffer[1024];
-
-        serverSocket = socket(AF_INET, SOCK_STREAM, 0); // Cambiado a AF_INET
-        serverAddr.sin_family = AF_INET;
-        serverAddr.sin_port = htons(PORT);
-        serverAddr.sin_addr.s_addr = INADDR_ANY;
-        memset(serverAddr.sin_zero, '\0', sizeof(serverAddr.sin_zero));
-        bind(serverSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
-
-        if (listen(serverSocket, 50) == 0) {
-            std::cout << "Servidor REST en ejecución en http://localhost:" << PORT << std::endl;
-        } else {
-            std::cerr << "Error al iniciar el servidor" << std::endl;
-            WSACleanup(); // Limpieza de Winsock
-            return;
-        }
-
-        addr_size = sizeof(serverStorage);
-        newSocket = accept(serverSocket, (struct sockaddr*)&serverStorage, &addr_size);
-
-        while (true) {
-            recv(newSocket, buffer, 1024, 0);
-
-            if (std::string(buffer).find("POST /api/convertirFrase") != std::string::npos) {
-                // Procesa la solicitud POST para /api/convertirFrase
-                std::string content = "Ejemplo de cuerpo de solicitud POST";  // Aquí debes obtener el cuerpo de la solicitud
-
-                std::string respuesta = chatGPT.convertirFrase(content);
-
-                std::string response = "HTTP/1.1 200 OK\r\nContent-Length: " + std::to_string(respuesta.length()) + "\r\n\r\n" + respuesta;
-
-                send(newSocket, response.c_str(), response.length(), 0);
-            } else {
-                // Si la solicitud no coincide con ninguna ruta conocida, puedes responder con un error 404.
-                std::string not_found_response = "HTTP/1.1 404 Not Found\r\n\r\n";
-                send(newSocket, not_found_response.c_str(), not_found_response.length(), 0);
-            }
-        }
-
-        closesocket(newSocket);
-        closesocket(serverSocket);
-
-        WSACleanup(); // Limpieza de Winsock
+    std::string convertirFrase(const std::string& userInput) {
+        // Implementa la lógica de conversión aquí
+        // Esta es solo una implementación de ejemplo
+        return "Respuesta a: " + userInput;
     }
-
-private:
-    chatGPT& chatGPT;
 };
 
 int main() {
-    std::string apiKey = "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";
-    chatGPT chatGPTInstance(apiKey);
-    RestServer restServer(chatGPTInstance); // Crear una instancia de RestServer
+    // Crea una instancia de la clase ChatGPT
+    ChatGPT chatGPTInstance;
 
-    restServer.start(); // Llamar al método start() de restServer
+    httplib::Server svr;
+
+    svr.Post("/api/convertirFrase", [&chatGPTInstance](const httplib::Request& req, httplib::Response& res) {
+        // Obtiene el cuerpo de la solicitud POST (que debe contener la frase del usuario)
+        std::string userInput = req.get_param_value("frase");
+
+        // Realiza la conversión de la frase utilizando la instancia de ChatGPT
+        std::string respuesta = chatGPTInstance.convertirFrase(userInput);
+
+        // Crea una respuesta JSON
+        json respuestaJson = {
+            {"respuesta", respuesta}
+        };
+
+        res.set_content(respuestaJson.dump(), "application/json");
+    });
+
+    std::cout << "Servidor REST en ejecución en http://localhost:8080/" << std::endl;
+
+    svr.listen("localhost", 8085);
 
     return 0;
-}
+}  // Fin de main()
