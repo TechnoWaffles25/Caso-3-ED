@@ -10,7 +10,7 @@ const int PORT = 8080;
 
 class RestServer {
 public:
-    RestServer(const std::string& apiKey) : chatGPT(apiKey) {}
+    RestServer(chatGPT& chatGPTInstance) : chatGPT(chatGPTInstance) {}
 
     void start() {
         WSADATA wsaData;
@@ -48,7 +48,7 @@ public:
 
             if (std::string(buffer).find("POST /api/convertirFrase") != std::string::npos) {
                 // Procesa la solicitud POST para /api/convertirFrase
-                std::string content = "Ejemplo de cuerpo de solicitud POST";  // Aquí obtener el cuerpo de la solicitud
+                std::string content = "Ejemplo de cuerpo de solicitud POST";  // Aquí debes obtener el cuerpo de la solicitud
 
                 std::string respuesta = chatGPT.convertirFrase(content);
 
@@ -56,25 +56,28 @@ public:
 
                 send(newSocket, response.c_str(), response.length(), 0);
             } else {
-                // Si la solicitud no coincide con ninguna ruta conocida, puede responder con un error 404.
+                // Si la solicitud no coincide con ninguna ruta conocida, puedes responder con un error 404.
                 std::string not_found_response = "HTTP/1.1 404 Not Found\r\n\r\n";
                 send(newSocket, not_found_response.c_str(), not_found_response.length(), 0);
             }
         }
 
-        close(newSocket);
-        close(serverSocket);
+        closesocket(newSocket);
+        closesocket(serverSocket);
 
         WSACleanup(); // Limpieza de Winsock
     }
 
 private:
-    chatGPT chatGPT;
+    chatGPT& chatGPT;
 };
 
 int main() {
-    RestServer restServer("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"); // Asegúrate de proporcionar la clave de la API correcta
-    restServer.start();
+    std::string apiKey = "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";
+    chatGPT chatGPTInstance(apiKey);
+    RestServer restServer(chatGPTInstance); // Crear una instancia de RestServer
+
+    restServer.start(); // Llamar al método start() de restServer
 
     return 0;
 }
