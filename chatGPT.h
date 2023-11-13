@@ -16,9 +16,6 @@ class chatGPT{
     public:
         chatGPT(std::string& papiKey) : apiKey(papiKey) {
 }
-
-
-
     std::string makeApiRequest(const std::string& requestBody){
     CURL* curl = curl_easy_init();
     
