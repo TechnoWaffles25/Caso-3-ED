@@ -1,47 +1,40 @@
 #include <iostream>
 #include "json.hpp"
-#include "cpp-httplib-master/httplib.h"
+#define CROW_MAIN
+#include "crow/include/crow.h"
 
 using json = nlohmann::json;
 using namespace std;
 
 class ChatGPT {
 public:
-    std::string convertirFrase(const std::string& userInput) {
+    string convertirFrase(const string& userInput) {
         return "Respuesta a: " + userInput;
     }
 };
 
 int main() {
+    crow::SimpleApp app;
     ChatGPT chatGPTInstance;
-    httplib::Server svr;
 
-    svr.Post("/api/convertirFrase", [&chatGPTInstance](const httplib::Request& req, httplib::Response& res) {
-        cout << "Solicitud recibida: " << req.body << endl;
-        
-        // Procesamiento comentado. Descomentar para uso real.
+     CROW_ROUTE(app, "/api/convertirFrase")([&](const crow::request& req){
+        // Este bloque es donde puedes procesar la solicitud.
+        // Si tienes una solicitud POST y necesitas procesar datos JSON, por ejemplo, puedes hacerlo aquí.
         // std::string userInput = req.body;
-        // std::string respuesta = chatGPTInstance.convertirFrase(userInput);
-        // json respuestaJson = {{"respuesta", respuesta}};
+        // std::string respuesta = "Respuesta a: " + userInput;
+        // crow::json::wvalue respuestaJson;
+        // respuestaJson["respuesta"] = respuesta;
 
-        json respuestaJson = {{"respuesta", "Hola mundo"}};
-        res.set_content(respuestaJson.dump(), "application/json");
-        cout << "Respuesta enviada: " << respuestaJson.dump() << endl;
+        // Pero para un simple "Hola mundo", simplemente respondemos con un JSON así:
+        crow::json::wvalue respuestaJson;
+        respuestaJson["respuesta"] = "Hola mundo";
+
+        // Enviar la respuesta
+        return respuestaJson;
     });
 
-    try {
-        cout << "Intentando iniciar el servidor REST en http://localhost:8080/" << endl;
-        
-        if (!svr.listen("localhost", 8080)) {
-            cerr << "Error al iniciar el servidor en http://localhost:8080" << endl;
-            return -1;
-        }
-
-        cout << "Servidor REST en ejecución en http://localhost:8080/" << endl;
-    } catch (const std::exception& e) {
-        cerr << "Excepción al iniciar el servidor: " << e.what() << endl;
-        return -1;
-    }
+    cout << "Intentando iniciar el servidor Crow en http://localhost:8080" << endl;
+    app.port(8080).multithreaded().run();
 
     return 0;
 }
