@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <iostream>
 
+// Struct que guarda el indice del parrafo y el la posicion de la palabra dentro del parrafo
 struct TokenPosition {
     int paragraphIndex;
     int wordIndex;
@@ -20,32 +21,32 @@ struct TokenInfo {
     std::string token;
     std::vector<TokenPosition> positions;
 
-    // Less than operator
+    // Sobrecargamos el operados < para que maneje objetos TokenInfo
     bool operator<(const TokenInfo& other) const {
         return token < other.token;
     }
 
-    // Greater than operator
+    // Sobrecargamos el operados > para que maneje objetos TokenInfo
     bool operator>(const TokenInfo& other) const {
         return token > other.token;
     }
 
-    // Less than or equal to operator
+    // Sobrecargamos el operados <= para que maneje objetos TokenInfo
     bool operator<=(const TokenInfo& other) const {
         return !(*this > other);
     }
 
-    // Greater than or equal to operator
+    // Sobrecargamos el operados >= para que maneje objetos TokenInfo
     bool operator>=(const TokenInfo& other) const {
         return !(*this < other);
     }
 
-    // Equality operator
+    // Sobrecargamos el operador == para que maneje objetos TokenInfo
     bool operator==(const TokenInfo& other) const {
         return token == other.token && positions == other.positions;
     }
 
-    // Not equal operator
+    // Sobrecargamos el operador != para que maneje objetos TokenInfo
     bool operator!=(const TokenInfo& other) const {
         return !(*this == other);
     }

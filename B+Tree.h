@@ -40,11 +40,11 @@ public:
 
 template <typename T>
 class BPlusTree {
-    Node<T>* root;
-    std::size_t degree;
+    Node<T>* root; // Nodo raiz
+    std::size_t degree; // Grado del arbol, max numero de hijos
 
 public:
-    BPlusTree(std::size_t _degree) { // Constructor
+    BPlusTree(std::size_t _degree) { // Constructor, inicializa el arbol con un grado especifico
         this->root = nullptr;
         this->degree = _degree;
     }
@@ -52,16 +52,19 @@ public:
         clear(this->root);
     }
 
+    // Devuelve la raiz
     Node<T>* getroot(){
         return this->root;
     }
 
+    //* Funcioon para buscar un token en el arbol SIN USAR
     TokenInfo* BPlusTreeSearch(Node<T>* node, T key){
         if(node == nullptr) {
             return nullptr;
         } else {
             Node<T>* cursor = node;
 
+            // Navegar por el arbol hasta llegar a un nodo hoja
             while(!cursor->is_leaf){
                 for(int i = 0; i < cursor->size; i++){
                     if(key.token < cursor->item[i].token){ 
@@ -75,6 +78,7 @@ public:
                 }
             }
 
+            // Buscar el token en el nodo hoja
             for (int i = 0; i < cursor->size; i++) {
                 if (cursor->item[i].token == key.token) {
                     return &cursor->item[i]; // Devuelve el puntero al TokenInfo encontrado
@@ -85,14 +89,17 @@ public:
         }
     }
 
+    //* Usado para insert BB
     Node<T>* BPlusTreeRangeSearch(Node<T>* node, T key){
         if(node == nullptr) {
             return nullptr;
         } else {
             Node<T>* cursor = node;
 
+            // Navega hasta abajo en el arbol hasta llegar a un nodo hoja
             while(!cursor->is_leaf){
                 for(int i = 0; i < cursor->size; i++){
+                    // Si encuentra el hioj correcto para el valor de la clave
                     if(key.token < cursor->item[i].token){
                         cursor = cursor->children[i];
                         break;
@@ -103,7 +110,7 @@ public:
                     }
                 }
             }
-            return cursor;
+            return cursor; // Devuelve el nodo hoja
         }
     }
 
@@ -135,6 +142,7 @@ public:
         return BPlusTreeSearch(this->root, data);
     }
 
+    // SIN USAR
     int find_index(T* arr, T data, int len){
         int index = 0;
         for(int i=0; i<len; i++){
@@ -150,7 +158,9 @@ public:
         return index;
     }
 
+    //* Funcion que busca todas las instancias de un token especifio en el arbol
     std::vector<TokenInfo*> BPlusTreeSearchAll(Node<T>* node, T key) {
+        // Vector de palabras encontradas
         std::vector<TokenInfo*> results;
 
         if (node == nullptr) {
@@ -178,11 +188,10 @@ public:
                 results.push_back(&cursor->item[i]);
             }
         }
-
         return results;
     }
 
-
+    //* El que se llama en el main
     std::vector<TokenInfo*> searchAll(T data) {
         return BPlusTreeSearchAll(this->root, data);
     }
@@ -209,6 +218,7 @@ public:
         return arr;
     }
     
+    // Sin usra
     Node<T>** child_insert(Node<T>** child_arr, Node<T>*child,int len,int index){
         for(int i= len; i > index; i--){
             child_arr[i] = child_arr[i - 1];
@@ -217,6 +227,7 @@ public:
         return child_arr;
     }
     
+    // Sin usar
     Node<T>* child_item_insert(Node<T>* node, T data, Node<T>* child){
         int item_index=0;
         int child_index=0;
@@ -245,6 +256,7 @@ public:
         return node;
     }
     
+    //* Usado en el caso especial del insert.
     void InsertPar(Node<T>* par,Node<T>* child, T data){
         //overflow check
         Node<T>* cursor = par;
@@ -323,44 +335,45 @@ public:
         }
     }
     
+    //* Funcion para insertar un token en el arbol
     void insert(T data) {
-        if(this->root == nullptr){ //if the tree is empty
-            this->root = new Node<T>(this->degree);
-            this->root->is_leaf = true;
-            this->root->item[0] = data;
-            this->root->size = 1; //
+        // Caso 1: Arbol Vacio
+        if(this->root == nullptr){  
+            this->root = new Node<T>(this->degree); // Nuevo nodo
+            this->root->is_leaf = true; // Lo marca como hoja
+            this->root->item[0] = data; // Asigna el dato
+            this->root->size = 1; // Ajusta el tamaño
         }
-        else{ //if the tree has at least one node
-            Node<T>* cursor = this->root;
+        else{ // Caso 2: El arbol tiene la menos un nodo
 
-            //move to leaf node
+            // Creamos un cursor que busca el nodo hoja donde se insertara el token
+            Node<T>* cursor = this->root;
             cursor = BPlusTreeRangeSearch(cursor, data);
 
-            //overflow check
-            if(cursor->size < (this->degree-1)){ // not overflow, just insert in the correct position
-                //item insert and rearrange
+            // Revisa si hay espacio en el nodo hoja
+            if(cursor->size < (this->degree-1)){
+                // Si hay espacio, inserta el token en el nodo hoja
                 cursor->item = item_insert(cursor->item,data,cursor->size);
                 cursor->size++;
-                //edit pointer(next node)
+                // Ajusta el cursor al siguiente nodo
                 cursor->children[cursor->size] = cursor->children[cursor->size-1];
                 cursor->children[cursor->size-1] = nullptr;
             }
-            else{//overflow case
-                //make new node
+            else{ // Caso 3: Desbordamiento del nodo hoja, al intentar insertar un nuevo nodo en un nodo hoja lleno se debe manejar el desbordamiento
+                
+                // Se hace un nuevo nodo hoja, se establece el padre del nuevo nodo como el padre del nodo actual
                 auto* Newnode = new Node<T>(this->degree);
                 Newnode->is_leaf = true;
                 Newnode->parent = cursor->parent;
 
-                //copy item
-                T* item_copy = new T[cursor->size+1];
-                for(int i=0; i<cursor->size; i++){
+                // Copiamos elementos al nuevo nodo
+                T* item_copy = new T[cursor->size+1]; // arreglo temporal con la info del nodo actual mas el nuevo elemento
+                for(int i=0; i<cursor->size; i++){ // copia los elementos
                     item_copy[i] = cursor->item[i];
                 }
+                item_copy = item_insert(item_copy,data,cursor->size); // los inserta
 
-                //insert and rearrange
-                item_copy = item_insert(item_copy,data,cursor->size);
-
-                //split nodes
+                // Dividimos el arreglo temporal en dos, uno para cada nodo
                 cursor->size = (this->degree)/2;
                 if((this->degree) % 2 == 0){
                     Newnode->size = (this->degree) / 2;
@@ -369,42 +382,54 @@ public:
                     Newnode->size = (this->degree) / 2 + 1;
                 }
 
+                // Reasignamos los elementos a los nodos, la mitad para cada uno
                 for(int i=0; i<cursor->size;i++){
                     cursor->item[i] = item_copy[i];
                 }
                 for(int i=0; i < Newnode->size; i++){
                     Newnode->item[i] = item_copy[cursor->size + i];
                 }
-
+                // Ajustamos los punteros y enlaces
                 cursor->children[cursor->size] = Newnode;
                 Newnode->children[Newnode->size] = cursor->children[this->degree-1];
                 cursor->children[this->degree-1] = nullptr;
 
+                // Libera la memoria del arreglo temporal
                 delete[] item_copy;
 
-                //parent check
+                // Caso 4: Maneja la insercion en el nodo padre
+                // Despues de dividir el nodo hoja hay que insertar un elemento en el nodo padre para
+                // mantener las propiedades del arbol b+
+                // El elemento a insertar en el nodo padre es el primer elemento del nuevo nodo hoja
                 T paritem = Newnode->item[0];
 
-                if(cursor->parent == nullptr){//if there are no parent node(root case)
-                    auto* Newparent = new Node<T>(this->degree);
-                    cursor->parent = Newparent;
+                if(cursor->parent == nullptr){
+                    // Caso especial: No hay nodo padre, 
+                    auto* Newparent = new Node<T>(this->degree); // Creamos un nuevo nodo
+                    
+                    // Asignamos los enlaces entre nodos
+                    cursor->parent = Newparent; 
                     Newnode->parent = Newparent;
 
+                    // Asigna los valores al nuevo nodo padre, aumenta el tamaño para representar la inserción
                     Newparent->item[0] = paritem;
                     Newparent->size++;
-
+                    
                     Newparent->children[0] = cursor;
                     Newparent->children[1] = Newnode;
 
+                    // Actualiza la raiz del arbol para que sea el nuevo nodo padre
                     this->root = Newparent;
                 }
-                else{//if there already have parent node
+                else{ 
+                    // Insertamos en el nodo padre existente, puede ocasionar una cascada de divisiones
                     InsertPar(cursor->parent, Newnode, paritem);
                 }
             }
         }
     }
 
+    // Sin usar
     void remove(T data) { // Remove an item from the tree.
         //make cursor
         Node<T>* cursor = this->root;
@@ -595,7 +620,8 @@ public:
             return;
         }
     }
-
+    
+    // Sin usar
     void Removepar(Node<T>* node, int index, Node<T>* par){
         Node<T>* remover = node;
         Node<T>* cursor = par;
@@ -784,7 +810,7 @@ public:
             return;
         }
     }
-
+    // Sin usar
     void clear(Node<T>* cursor){
         if(cursor != nullptr){
             if(!cursor->is_leaf){
@@ -798,6 +824,7 @@ public:
         }
     }
     
+    // Funciones para imprimir el arbol
     void bpt_print(){
         print(this->root);
     }

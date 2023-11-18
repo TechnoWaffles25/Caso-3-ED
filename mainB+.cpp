@@ -14,6 +14,7 @@ int main() {
     files.push_back("Books/AliceInWonderland.txt");
 
     // Crear un arbol B+ con un orden de 50
+    // El orden de un arbol B+ es la cantidad maxima de hijos que puede tener un nodo
     BPlusTree<TokenInfo> bpt(50);
     TextProcessing tp;
 
@@ -21,12 +22,12 @@ int main() {
     std::unordered_set<std::string> stopWords = {/* Stop Words*/};
     tp.setStopWords(stopWords);
 
-    // Loop through the files
+    // Recorre los libros a procesar
     for (const auto& file : files) {
         auto paragraphs = tp.tokenizeFileByParagraphs(file);
         for (const auto& paragraphPair : paragraphs) {
             for (const auto& tokenInfo : paragraphPair.second) {
-                bpt.insert(tokenInfo); // Insert the entire TokenInfo object into the B+ tree
+                bpt.insert(tokenInfo); // Inserta el tokenInfo en el arbol B+
             }
         }
     }
@@ -71,7 +72,6 @@ int main() {
                 // Si no existe, crea uno nuevo y obtén un iterador a él
                 it = paragraphScores.insert({position.paragraphIndex, ParagraphScore(position.paragraphIndex)}).first;
             }
-
             // Ahora agrega el TokenInfo al ParagraphScore correspondiente
             it->second.addTokenInfo(tokenInfo);
         }
