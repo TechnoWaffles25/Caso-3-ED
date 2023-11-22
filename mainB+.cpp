@@ -8,6 +8,10 @@
 #include <string>
 #include <algorithm>
 
+/*
+    3r preliminar: buscar en TODOS los libros la frase, al final de todas las busquedas escoger 
+    un top 10 de libros con un top 3 de parrafos por libro, hacer una suma de los scores de los 3 parrafos.
+*/
 int main() {
     // Esto deberia venir del preliminar 1, todas las rutas de los archivos a procesar
     std::vector<std::string> files;
@@ -57,9 +61,9 @@ int main() {
     }
 
     if (allTokensFound) {
-        std::cout << "Todos los tokens de la frase fueron encontrados en el arbol B+." << std::endl;
+        std::cout << "Todos los tokens de la frase fueron encontrados en el arbol B." << std::endl;
     } else {
-        std::cout << "No todos los tokens de la frase fueron encontrados en el arbol B+." << std::endl;
+        std::cout << "No todos los tokens de la frase fueron encontrados en el arbol B." << std::endl;
     }
 
     // Logica de puntuacion de parrafos
@@ -72,6 +76,7 @@ int main() {
                 // Si no existe, crea uno nuevo y obtén un iterador a él
                 it = paragraphScores.insert({position.paragraphIndex, ParagraphScore(position.paragraphIndex)}).first;
             }
+            
             // Ahora agrega el TokenInfo al ParagraphScore correspondiente
             it->second.addTokenInfo(tokenInfo);
         }

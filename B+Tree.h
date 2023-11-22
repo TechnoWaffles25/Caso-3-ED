@@ -1,4 +1,4 @@
-// Implementacion del B+ sacado de https://github.com/solangii/b-plus-tree
+// Implementacion del B sacado de https://github.com/solangii/b-plus-tree
 #ifndef BPlusTree_H
 #define BPlusTree_H
 
