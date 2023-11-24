@@ -4,6 +4,12 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include "B+Tree.h"
+#include "BHandler.h"
+#include "AVLTree.h"
+#include "json.hpp"
+
+using json = nlohmann::json;
 
 const int PORT = 8085;
 
@@ -68,8 +74,17 @@ int main() {
             // Imprimir el cuerpo de la solicitud en la consola
             std::cout << "Cuerpo de la solicitud: " << requestBody << std::endl;
 
-            // Responder con el cuerpo recibido
-            std::string response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n" + requestBody;
+            // Buscar libros basados en la frase
+            auto libros = buscarLibros(requestBody);  // Asumiendo que esta función existe y devuelve una lista de libros, recordar cambiar por la búsqueda real
+
+            // Convertir la lista de libros a JSON
+            json respuestaJson = json::array();
+            for (const auto& libro : libros) {
+                respuestaJson.push_back({{"titulo", libro.titulo}, {"calificacion", libro.calificacion}});
+            }
+
+            // Enviar la respuesta JSON
+            std::string response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n" + respuestaJson.dump();
             send(clientSocket, response.c_str(), response.size(), 0);
         } else {
             // Si no se encuentra un cuerpo, responder con un mensaje de error
