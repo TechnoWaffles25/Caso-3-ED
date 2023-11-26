@@ -14,6 +14,7 @@ struct Book {
         int score;
 
     public:
+        Book() : title(""), author(""), genre(""), filepath(""), score(0) {}
         Book(string t, string a, string g, string f)
             : title(t), author(a), genre(g), filepath(f), score(0) {}
 
