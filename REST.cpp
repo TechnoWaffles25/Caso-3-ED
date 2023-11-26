@@ -75,7 +75,7 @@ int main() {
             std::cout << "Cuerpo de la solicitud: " << requestBody << std::endl;
 
             // Buscar libros basados en la frase
-            auto libros = buscarLibros(requestBody);  // Asumiendo que esta función existe y devuelve una lista de libros, recordar cambiar por la búsqueda real
+            auto libros = bPlusTreeInstance.searchAll(requestBody);  // Asumiendo que esta función existe y devuelve una lista de libros, recordar cambiar por la búsqueda real
 
             // Convertir la lista de libros a JSON
             json respuestaJson = json::array();
