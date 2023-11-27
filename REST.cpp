@@ -10,7 +10,7 @@
 
 using json = nlohmann::json;
 
-const int PORT = 8087;
+const int PORT = 8088;
 
 int main() {
     int serverSocket, clientSocket;
