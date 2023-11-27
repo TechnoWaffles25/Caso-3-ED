@@ -28,13 +28,10 @@ private:
     Top10 top10;
 
 public:
-<<<<<<< HEAD
-    BHandler(string directoryPath);
-=======
     BHandler(string directoryPath) {
->>>>>>> 4548dd892ff3984ee65e75b822c1a7fa744dab3d
         vectorTrees = vector<BPlusTree<TokenInfo>>();
         loadBooksFromDirectory(directoryPath);
+    }
     
 
     void setStopWords(unordered_set<string>& stopWords) {
@@ -42,12 +39,6 @@ public:
     }
 
     void loadBooksFromDirectory(const string& directoryPath) {
-<<<<<<< HEAD
-        for (const auto& file : std::filesystem::directory_iterator(directoryPath)) {
-            BPlusTree <TokenInfo> bpt(GRADO);
-            std::ifstream bookFile(file.path());
-            auto paragraphs = tp.tokenizeFileByParagraphs(bookFile);
-=======
         for (const auto& file : filesystem::directory_iterator(directoryPath)) {
             ifstream bookFile(file.path().string());
             string title, author, genre, filepath;
@@ -65,7 +56,6 @@ public:
             // Procesar el archivo para construir el árbol B+
             BPlusTree<TokenInfo> bpt(GRADO, file.path().string());
             auto paragraphs = tp.tokenizeFileByParagraphs(file.path().string());
->>>>>>> 4548dd892ff3984ee65e75b822c1a7fa744dab3d
             for (const auto& paragraphPair : paragraphs) {
                 for (const auto& tokenInfo : paragraphPair.second) {
                     bpt.insert(tokenInfo);
