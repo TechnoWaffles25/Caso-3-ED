@@ -19,7 +19,7 @@ int main() {
 
     // Crear un arbol B+ con un orden de 50
     // El orden de un arbol B+ es la cantidad maxima de hijos que puede tener un nodo
-    BPlusTree<TokenInfo> bpt(50);
+    BPlusTree<TokenInfo> bpt(50, "Books/AliceInWonderland.txt");
     TextProcessing tp;
 
     // Cargamos Stop Words

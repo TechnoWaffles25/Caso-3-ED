@@ -13,14 +13,14 @@ class Top10 {
         Top10(){}
 
         void addBook(const Book& book) {
-            // Insert the new book in the correct position
+            // Inserta el libro en el vector de manera ordenada
             auto it = std::lower_bound(top10.begin(), top10.end(), book, 
                                     [](const Book& a, const Book& b) {
                                         return a.getScore() > b.getScore();
                                     });
             top10.insert(it, book);
 
-            // If there are more than 10 books, remove the one with the lowest score
+            // Si existen mas de 10 libros se elimina el que tiene menor puntaje
             if (top10.size() > 10) {
                 top10.pop_back();
             }

@@ -24,9 +24,15 @@ class BHandler {
 private:
     vector<BPlusTree<TokenInfo>> vectorTrees;
     TextProcessing tp;
+    map<string, Book> books;
     Top10 top10;
+
 public:
+<<<<<<< HEAD
     BHandler(string directoryPath);
+=======
+    BHandler(string directoryPath) {
+>>>>>>> 4548dd892ff3984ee65e75b822c1a7fa744dab3d
         vectorTrees = vector<BPlusTree<TokenInfo>>();
         loadBooksFromDirectory(directoryPath);
     
@@ -36,10 +42,30 @@ public:
     }
 
     void loadBooksFromDirectory(const string& directoryPath) {
+<<<<<<< HEAD
         for (const auto& file : std::filesystem::directory_iterator(directoryPath)) {
             BPlusTree <TokenInfo> bpt(GRADO);
             std::ifstream bookFile(file.path());
             auto paragraphs = tp.tokenizeFileByParagraphs(bookFile);
+=======
+        for (const auto& file : filesystem::directory_iterator(directoryPath)) {
+            ifstream bookFile(file.path().string());
+            string title, author, genre, filepath;
+
+            // Leer las primeras cuatro líneas para obtener la información del libro
+            getline(bookFile, title);
+            getline(bookFile, author);
+            getline(bookFile, genre);
+            filepath = file.path().filename().string();
+
+            // Crear una instancia de Book y almacenarla
+            Book book(title, author, genre, filepath);
+            books[filepath] = book;
+
+            // Procesar el archivo para construir el árbol B+
+            BPlusTree<TokenInfo> bpt(GRADO, file.path().string());
+            auto paragraphs = tp.tokenizeFileByParagraphs(file.path().string());
+>>>>>>> 4548dd892ff3984ee65e75b822c1a7fa744dab3d
             for (const auto& paragraphPair : paragraphs) {
                 for (const auto& tokenInfo : paragraphPair.second) {
                     bpt.insert(tokenInfo);
@@ -49,27 +75,31 @@ public:
         }
     }
 
+
     vector<TokenInfo*> findTokens(const vector<string>& tokens, BPlusTree<TokenInfo>& bpt) {
         vector<TokenInfo*> foundTokenInfos;
         bool allTokensFound = true;
 
         for (const auto& token : tokens) {
-            foundTokenInfos = bpt.searchAll(TokenInfo{token, {}});
-
-            if (foundTokenInfos.empty()) {
+            auto tokenInfos = bpt.searchAll(TokenInfo{token, {}});
+            if (!tokenInfos.empty()) {
+                foundTokenInfos.insert(foundTokenInfos.end(), tokenInfos.begin(), tokenInfos.end());
+            } else {
                 allTokensFound = false;
+                break;
             }
         }
 
         if (!allTokensFound) {
             cout << "!! No se encontraron todos los tokens" << endl;
+            foundTokenInfos.clear();
         }
         return foundTokenInfos;
     }
 
     vector<ParagraphScore> calculateScores(const vector<string>& tokens, const vector<TokenInfo*>& foundTokenInfos) {
         map<int, ParagraphScore> paragraphScores;
-        for (TokenInfo* tokenInfo : foundTokenInfos) {
+        for (const TokenInfo* tokenInfo : foundTokenInfos) {
             for (const auto& position : tokenInfo->positions) {
                 auto it = paragraphScores.find(position.paragraphIndex);
                 if (it == paragraphScores.end()) {
@@ -96,22 +126,36 @@ public:
         return sortedScores;
     }
 
-    /*
-        Funcion que retorna un vector con los top 10 libros
-        - para saber si un libro entra en el top10, la suma del score de sus top 3 parrafos debe ser mayor a la del ultimo libro en el top10
-    */ 
-
-    vector<Top10> buscarFrase(const string& phraseToSearch) {
-        vector<Book> top10;
+    vector<Book> buscarFrase(const string& phraseToSearch) {
+        vector<Book> top10Books;
         vector<string> tokens = tp.tokenize(phraseToSearch, true);
+
         for (BPlusTree<TokenInfo>& bpt : vectorTrees) {
             vector<TokenInfo*> foundTokenInfos = findTokens(tokens, bpt);
-            vector<ParagraphScore> sortedScores = calculateScores(tokens, foundTokenInfos);
-            for (const auto& score : sortedScores) {
-                cout << "Archivo" << bpt.getFileName() << " - Parrafo " << score.paragraphIndex << " - Puntuación: " << score.score << endl;
+            if (!foundTokenInfos.empty()) {
+                vector<ParagraphScore> sortedScores = calculateScores(tokens, foundTokenInfos);
+
+                // Sumar los puntajes de los 3 mejores párrafos
+                int totalScore = 0;
+                for (int i = 0; i < 3 && i < sortedScores.size(); ++i) {
+                    totalScore += sortedScores[i].score;
+                }
+
+                // Actualizar la puntuación del libro correspondiente
+                string filepath = bpt.getFileName(); // Asegúrate de que BPlusTree tenga un método getFileName
+                if (books.find(filepath) != books.end()) {
+                    books[filepath].setScore(totalScore);
+                    top10.addBook(books[filepath]);
+                }
             }
-            cout << "\n---------------------------------------------------------------------------------"<<endl;
-        } return top10;
+        }
+
+        // Obtener los top 10 libros
+        top10Books = top10.getTop10();
+
+        return top10Books;
     }
-}
+
+};
+
 #endif

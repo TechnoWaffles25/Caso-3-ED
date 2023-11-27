@@ -5,27 +5,45 @@
 #include "token.h"
 #include <iostream>
 
+using namespace std;
+/*
+    Los templates se utilizan cuando se desea mandar el tipo de dato por parametro para no tener que
+    escribir muchas versiones del codigo para cada tipo de dato. La implementacion del B sacada de github
+    viene asi, presumiblemente para que el arbol sea generico.
+*/
+
 template <typename T>
 
 struct Node {
-    bool is_leaf;
-    std::size_t degree; // maximum number of children
-    std::size_t size; // current number of item
-    T* item;
-    Node<T>** children;
-    Node<T>* parent;
+    bool is_leaf; // booleano que indica si el nodo es hoja
+    std::size_t degree; // numero maximo de hijos que el nodo puede tener
+    std::size_t size; // numero actual de claves que tiene el nodo
+    T* item; // Son las claves del nodo, en nuestro caso los tokeninfo. Aca es muy util el template
+    Node<T>** children; // Un puntero a un arreglo de punteros a mas nodos hijo. CLAVE PARA EL ARBOL
+    Node<T>* parent; // Un puntero al al nodo padre, es util para balancear el arbol.
 
 public:
-    Node(std::size_t _degree) {// Constructor
-        this->is_leaf = false;
-        this->degree = _degree;
-        this->size = 0;
+    Node(std::size_t _degree) { // Constructor
+        this->is_leaf = false; // Por defecto no es hoja
+        this->degree = _degree; // Asigna el grado que viene del arbol
+        this->size = 0; // Por defecto no tiene llaves
 
+        /* 
+            Crea un arreglo de tokens del tamaño del grado menos 1 
+            (el grado menos 1 es el numero maximo de tokens que puede tener un nodo)
+        */
         T* _item = new T[degree-1];
         for(int i=0; i<degree-1; i++){
-            _item[i] = T();
-        }
+            T* _item = new T[degree-1]; 
+                _item[i] = T();
+            }
         this->item = _item;
+
+        /*
+            Crea el arreglo de punteros a sus hijos, los cuales son inicializados en nullptr, esto 
+            reserva la memoria para eventualmente ser llenada. Sin embargo hay desventajas con esto
+            ya que si no se usa toda la memoria reservada se desperdicia.
+        */ 
 
         Node<T>** _children = new Node<T>*[degree];
         for(int i=0; i<degree; i++){
@@ -33,6 +51,7 @@ public:
         }
         this->children = _children;
 
+        // El nodo padre se inicializa en nullptr inicialmente.
         this->parent = nullptr;
 
     }
@@ -42,22 +61,29 @@ template <typename T>
 class BPlusTree {
     Node<T>* root; // Nodo raiz
     std::size_t degree; // Grado del arbol, max numero de hijos
+    string fileName; // Nombre del archivo al que esta asociado el arbol
 
 public:
-    BPlusTree(std::size_t _degree) { // Constructor, inicializa el arbol con un grado especifico
-        this->root = nullptr;
+    //? Constructor
+    BPlusTree(std::size_t _degree, string pFile) { // Constructor, inicializa el arbol con un grado especifico
+        this->root = nullptr; // Por defecto no hay raiz
         this->degree = _degree;
+        this->fileName = pFile;
     }
     ~BPlusTree() { // Destructor
         clear(this->root);
     }
 
-    // Devuelve la raiz
+    string getFileName() const {
+        return fileName;
+    }
+
+    //? Devuelve la raiz    
     Node<T>* getroot(){
         return this->root;
     }
 
-    //* Funcioon para buscar un token en el arbol SIN USAR
+    //? Funcion para buscar un solo token en el arbol
     TokenInfo* BPlusTreeSearch(Node<T>* node, T key){
         if(node == nullptr) {
             return nullptr;
@@ -89,60 +115,64 @@ public:
         }
     }
 
-    //* Usado para insert BB
+    //? Usado para insert y para remove. Busca el nodo hoja deseado creando un cursor y enviando el valor deseado
     Node<T>* BPlusTreeRangeSearch(Node<T>* node, T key){
+        // Caso base
         if(node == nullptr) {
             return nullptr;
         } else {
-            Node<T>* cursor = node;
+            Node<T>* cursor = node; // Crea el cursor comenzando en el nodo dado
 
             // Navega hasta abajo en el arbol hasta llegar a un nodo hoja
             while(!cursor->is_leaf){
-                for(int i = 0; i < cursor->size; i++){
-                    // Si encuentra el hioj correcto para el valor de la clave
-                    if(key.token < cursor->item[i].token){
+                for(int i = 0; i < cursor->size; i++){// Si llega a un nodo hoja, itera sobre sus elementos (tokens) y los compara con el actual
+                    // Si la clave es menor, se mueve hacia abajo a un nodo que potencialmente podria tener el token
+                    if(key.token < cursor->item[i].token){ 
                         cursor = cursor->children[i];
                         break;
                     }
+                    // Esto es en caso de que el token sea mayor que todos los tokens del nodo, 
+                    // se mueve al ultimo nodo hijo
                     if(i == cursor->size - 1){
                         cursor = cursor->children[i + 1];
                         break;
                     }
                 }
             }
-            return cursor; // Devuelve el nodo hoja
+            return cursor; // Devuelve el nodo hoja donde se puede encontrar el token
         }
     }
 
+    //?? Funcion que busca un rango de tokens en el arbol
+        int range_search(T start, T end, T* result_data, int arr_length) {
+            int index=0;
 
-    int range_search(T start, T end, T* result_data, int arr_length) {
-        int index=0;
+            Node<T>* start_node = BPlusTreeRangeSearch(this->root,start);
+            Node<T>* cursor = start_node;
+            T temp= cursor->item[0];
 
-        Node<T>* start_node = BPlusTreeRangeSearch(this->root,start);
-        Node<T>* cursor = start_node;
-        T temp= cursor->item[0];
-
-        while(temp<=end){
-            if(cursor == nullptr){
-                break;
-            }
-            for(int i=0; i< cursor->size;i++){
-                temp = cursor->item[i];
-                if((temp >= start)&&(temp <= end)){
-                    result_data[index] = temp;
-                    index++;
+            while(temp<=end){
+                if(cursor == nullptr){
+                    break;
                 }
+                for(int i=0; i< cursor->size;i++){
+                    temp = cursor->item[i];
+                    if((temp >= start)&&(temp <= end)){
+                        result_data[index] = temp;
+                        index++;
+                    }
+                }
+                cursor = cursor->children[cursor->size];
             }
-            cursor = cursor->children[cursor->size];
+            return index;
         }
-        return index;
-    }
-   
+    
+    //?? Funcion que busca un token en el arbol
     TokenInfo* search(T data) {
         return BPlusTreeSearch(this->root, data);
     }
 
-    // SIN USAR
+    //? Esta funcion encuentra la posicion en la que data debe ser insertado en un arreglo para mantener el orden
     int find_index(T* arr, T data, int len){
         int index = 0;
         for(int i=0; i<len; i++){
@@ -158,7 +188,7 @@ public:
         return index;
     }
 
-    //* Funcion que busca todas las instancias de un token especifio en el arbol
+    //? Funcion que busca todas las instancias de un token especifio en el arbol
     std::vector<TokenInfo*> BPlusTreeSearchAll(Node<T>* node, T key) {
         // Vector de palabras encontradas
         std::vector<TokenInfo*> results;
@@ -167,7 +197,11 @@ public:
             return results;
         }
 
-        // Encuentra el primer nodo hoja que contiene el token
+        /*
+            Se crea un nodo cursor para moverse hacia abajo por el arbol.
+            Mientras el cursor no sea un nodo hoja, se itera sobre los elementos del nodo para 
+            encontrar el hijo que potencialmente podria tener el token que se busca.
+        */ 
         Node<T>* cursor = node;
         while (!cursor->is_leaf) {
             for (int i = 0; i < cursor->size; i++) {
@@ -182,52 +216,73 @@ public:
             }
         }
 
-        // Recorre los elementos del nodo hoja y recopila todas las instancias del token
+        // Si encuentra alguna coincidencia en los elementos del nodo, los agrega al vector de resultados
         for (int i = 0; i < cursor->size; i++) {
             if (cursor->item[i].token == key.token) {
                 results.push_back(&cursor->item[i]);
             }
         }
+        // Devuelve el vector de resultados
         return results;
     }
 
-    //* El que se llama en el main
+    //? El que se llama en el main
     std::vector<TokenInfo*> searchAll(T data) {
         return BPlusTreeSearchAll(this->root, data);
     }
     
+    //? Usado en RemovePar
+    /*
+        Esta funcion inserta un dato en el arreglo de datos de un nodo. Busca la posicion donde 
+        se debe insertar el dato y ordena los demas datos para que se mantenga el orden.
+        Devuelve el arreglo con el nuevo dato insertado.
+    */ 
     T* item_insert(T* arr, T data, int len){
         int index = 0;
+        // Averigua la posicion donde se debe insertar el dato para mantener el orden
         for(int i=0; i<len; i++){
             if(data < arr[i]){
                 index = i;
                 break;
             }
+            // Si el indice es igual a la cantidad maxima permitida, se inserta al final
             if(i==len-1){
                 index = len;
                 break;
             }
         }
 
+        // Se mueven los elementos a la derecha para hacer espacio para el nuevo dato
         for(int i = len; i > index; i--){
             arr[i] = arr[i-1];
         }
-
+        // Se inserta el dato en la posicion deseada
         arr[index] = data;
 
+        /*
+            Se devuelve el arreglo con el nuevo dato insertado, sin embargo ya se modifico el 
+            arreglo original por lo que podria no devolver nada.
+        */ 
         return arr;
     }
     
-    // Sin usra
-    Node<T>** child_insert(Node<T>** child_arr, Node<T>*child,int len,int index){
+    //? Usado en RemovePar
+    /*
+        Esta funcion inserta un puntero a un nodo hijo en un arreglo de punteros a nodos hijos. Es util
+        ya que a menudo se deben insertar nodos hijos en posiciones especificas para mantener el orden.
+        Devuelve el arreglo con el nuevo puntero insertado.
+    */
+    Node<T>** child_insert(Node<T>** child_arr, Node<T>*child,int len,int index){ 
+        // La funcion comienza en el final del arreglo (len) y se mueve hacia la izquierda
         for(int i= len; i > index; i--){
-            child_arr[i] = child_arr[i - 1];
+            child_arr[i] = child_arr[i - 1]; // Va moviendo los elementos a la derecha para hacer espacio
         }
+        // Inserta el puntero al nodo hijo en la posicion deseada
         child_arr[index] = child;
         return child_arr;
     }
     
-    // Sin usar
+    //!! Usado en InsertPar
     Node<T>* child_item_insert(Node<T>* node, T data, Node<T>* child){
         int item_index=0;
         int child_index=0;
@@ -256,7 +311,7 @@ public:
         return node;
     }
     
-    //* Usado en el caso especial del insert.
+    //!! Usado en el caso especial del insert.
     void InsertPar(Node<T>* par,Node<T>* child, T data){
         //overflow check
         Node<T>* cursor = par;
@@ -335,18 +390,18 @@ public:
         }
     }
     
-    //* Funcion para insertar un token en el arbol
+    //* Funcion para insertar un token en el arbol.
     void insert(T data) {
-        // Caso 1: Arbol Vacio
+        // Caso 1: Arbol Vacio, se inserta en la raiz
         if(this->root == nullptr){  
-            this->root = new Node<T>(this->degree); // Nuevo nodo
+            this->root = new Node<T>(this->degree); // Crea el nuevo nodo raiz
             this->root->is_leaf = true; // Lo marca como hoja
             this->root->item[0] = data; // Asigna el dato
             this->root->size = 1; // Ajusta el tamaño
         }
         else{ // Caso 2: El arbol tiene la menos un nodo
 
-            // Creamos un cursor que busca el nodo hoja donde se insertara el token
+            // Creamos un cursor que busca el nodo donde se insertara el token
             Node<T>* cursor = this->root;
             cursor = BPlusTreeRangeSearch(cursor, data);
 
@@ -359,7 +414,10 @@ public:
                 cursor->children[cursor->size] = cursor->children[cursor->size-1];
                 cursor->children[cursor->size-1] = nullptr;
             }
-            else{ // Caso 3: Desbordamiento del nodo hoja, al intentar insertar un nuevo nodo en un nodo hoja lleno se debe manejar el desbordamiento
+            else{ /*
+                    Caso 3: Desbordamiento del nodo hoja, al intentar insertar un nuevo 
+                    nodo en un nodo hoja lleno se debe manejar el desbordamiento
+                */ 
                 
                 // Se hace un nuevo nodo hoja, se establece el padre del nuevo nodo como el padre del nodo actual
                 auto* Newnode = new Node<T>(this->degree);
@@ -429,26 +487,32 @@ public:
         }
     }
 
-    // Sin usar
-    void remove(T data) { // Remove an item from the tree.
-        //make cursor
+    //? Funcion para remover un token del arbol
+    /*
+        La funcion de remove recibe un token a eliminar, y realiza un proceso de busqueda, identificacion
+        de hermanos, eliminacion, reorganizacion de punteros y manejo de underflow y balanceo. Hace uso de 
+        "REMOVEPAR".
+     */
+    void remove(T data) {
+        // Crea un cursor que empieza en la raiz
         Node<T>* cursor = this->root;
 
-        //move to leaf node
+        // Extrae el nodo donde se encuentra el token a eliminar
         cursor = BPlusTreeRangeSearch(cursor,data);
 
-        //make sibling index
+        // Busca el indice del token dentro del arreglo del nodo donde se encuentra el token
         int sib_index =-1;
         for(int i=0; i<cursor->parent->size+1;i++){
             if(cursor == cursor->parent->children[i]){
                 sib_index = i;
             }
         }
+        // Extrae el indice de los hermanos inmediatos a su izq y der (UTIL A LA HORA DE BALANCEAR)
         int left=sib_index-1;
         int right=sib_index+1;
 
 
-        //find data
+        // Encuentra el indice de los datos que se desean eliminar recorriendo el nodo padre
         int del_index=-1;
         for(int i=0; i< cursor->size; i++){
             if(cursor->item[i] == data){
@@ -456,69 +520,88 @@ public:
                 break;
             }
         }
-        //if data dosen't exist, nothing happen
+        // Si los datos NO existen regresa sin hacer nada
         if(del_index==-1){
-            return; // there is no match remove value
+            return;
         }
 
-        //remove data
-        for(int i=del_index; i<cursor->size-1;i++){
+        // De lo contrario, elimina los datos y los punteros
+        for(int i=del_index; i<cursor->size-1;i++){ // size-1 porque tiene los nodos tienen grado-1 hijos
             cursor->item[i] = cursor->item[i+1];
         }
         cursor->item[cursor->size-1] = 0;
         cursor->size--;
 
-        //if cursor is root, and there are no more data -> clean!
-        if(cursor == this->root && cursor->size==0){//root case
-            clear(this->root);
-            this->root = nullptr;
+        // Si el cursor es la raiz del arbol y ya no tiene datos, se limpia el arbol
+        if(cursor == this->root && cursor->size==0){
+            clear(this->root); // Limpia la raiz
+            this->root = nullptr; // establece que la raiz es nula
             return;
         }
         cursor->children[cursor->size] = cursor->children[cursor->size+1];
         cursor->children[cursor->size+1] = nullptr;
 
 
-        //underflow check
+        // Revisa el underflow, que es el caso donde un nodo no cumpla tener la cantidad de hijos minima requerida
         if(cursor == this->root){
             return;
         }
-        if(cursor->size < degree/2){//underflow case
+        if(cursor->size < degree/2){// Aca se ve donde verifica usando el grado/2 
 
-            if(left >= 0){// left_sibiling exists
+            // En caso de que exista un token hermano izquierdo, 
+            if(left >= 0){
+                // Extrae el nodo entre el hermano izquierdo y el cursor
                 Node<T>* leftsibling= cursor->parent->children[left];
 
-                if(leftsibling->size > degree/2){ //if data number is enough to use this node
-                    T* temp = new T[cursor->size+1];
+                /*
+                    Verifica si el hermano tiene suficientes elementos para redistribuir, si es asi, puede
+                    ceder un elemento al nodo con underflow
+                */ 
+                
+                if(leftsibling->size > degree/2){ 
+                    // Crea un arreglo temporal que recupera los tokens del cursor + 1 para el token que va a recibir
+                    T* temp = new T[cursor->size+1]; 
 
-                    //copy item
+                    // Copia TODOS los items del cursor al arreglo temporal
                     for(int i=0; i<cursor->size; i++){
                         temp[i]=cursor->item[i];
                     }
 
-                    //insert and rearrange
+                    // Inserta el token mas a la derecha del hermano izquierdo en el arreglo temporal
                     item_insert(temp,leftsibling->item[leftsibling->size -1],cursor->size);
                     for(int i=0; i<cursor->size+1; i++){
                         cursor->item[i] = temp[i];
                     }
+                    // Aumenta el tamaño del cursor al recibir el nuevo token
                     cursor->size++;
                     delete[] temp;
 
-                    //pointer edit
+                    // Reasigna los punteros del cursor
+                    // El puntero del final antiguo se vuelve el puntero del nuevo final
                     cursor->children[cursor->size] = cursor->children[cursor->size-1];
                     cursor->children[cursor->size-1] = nullptr;
 
-                    //sibling property edit
-                    leftsibling->item[leftsibling->size-1] = 0;
-                    leftsibling->size--;
-                    leftsibling->children[leftsibling->size] = leftsibling->children[leftsibling->size+1]; //cursor
+                    // Actualiza las propiedades del hermano izquierdo
+                    leftsibling->item[leftsibling->size-1] = 0; // Elimina el token que se cedio
+                    leftsibling->size--; // Refleja el cedimiento
+                    // El ultimo puntero del hermano izquierda avanza 1 y ese se pone en null para reflejar el cedimiento
+                    leftsibling->children[leftsibling->size] = leftsibling->children[leftsibling->size+1];
                     leftsibling->children[leftsibling->size+1]= nullptr;
 
-                    //parent property edit
+                    /*
+                        se actualiza el elemento correspondiente en el nodo padre de cursor. Esto se hace 
+                        para reflejar el nuevo primer elemento en cursor después de la reorganizacion. 
+                        El índice left indica la posición del elemento en el nodo padre que actúa 
+                        como clave para el rango de valores en cursor. Al cambiar este elemento en 
+                        el padre, aseguramos que la estructura del árbol B siga siendo válida 
+                        y refleje correctamente los rangos de valores en sus nodos hijos.
+                    */
                     cursor->parent->item[left] = cursor->item[0];
 
                     return;
                 }
             }
+            // En caso de que exista un token hermano derecho se hace lo mismo pero con logica para el nodo del hermano derecho
             if(right <= cursor->parent->size){// right_sibiling exists
                 Node<T>* rightsibling = cursor->parent->children[right];
 
@@ -557,29 +640,35 @@ public:
                 }
             }
 
-            //if sibling is not enought to use their data
-            //we have to merge step
+            /*
+                Si no existe ningun hermano con suficientes elementos para ceder, se hace un merge
+            */
 
-            if(left>=0){ // left_sibling exists
+            if(left>=0){ // MERGE CON EL HERMANO IZQUIERDO
+                // Recupera el nodo hermano izquierdo
                 Node<T>* leftsibling = cursor->parent->children[left];
 
-                //merge two leaf node
+                // Fusiona los dos nodos hoja, literalmente los vuelve uno solo
                 for(int i=0; i<cursor->size; i++){
                     leftsibling->item[leftsibling->size+i]=cursor->item[i];
                 }
-                //edit pointer
+                //Se ajustan los tamannos de los nodos,
                 leftsibling->children[leftsibling->size] = nullptr;
+                // Se aumenta el tamaño ya que se fusionaron directamente
                 leftsibling->size = leftsibling->size+cursor->size;
+                // El ultimo puntero de leftsibling ahora apunta al ultimo puntero del nodo cursor
                 leftsibling->children[leftsibling->size] = cursor->children[cursor->size];
 
-                //parent property edit
                 Removepar(cursor, left, cursor->parent);
+                
+                // Se limpia el nodo cursor liberando sus punteros y estableciendo los items en 0.
                 for(int i=0; i<cursor->size;i++){
                     cursor->item[i]=0;
                     cursor->children[i] = nullptr;
                 }
                 cursor->children[cursor->size] = nullptr;
-
+                
+                // Elimina de la memoria la lista de ptrs a items, la lista de ptrs a hijos y el nodo cursor
                 delete[] cursor->item;
                 delete[] cursor->children;
                 delete cursor;
@@ -621,14 +710,28 @@ public:
         }
     }
     
-    // Sin usar
-    void Removepar(Node<T>* node, int index, Node<T>* par){
+    //? Usada en REMOVE
+    /*
+        La funcion removpar actualiza el nodo padre luego de sufrir alguna fusion en un nodo hijo. Es vital
+        ya que mantiene la integridad del arbol y sus propiedades.
+    */
+    void Removepar(Node<T>* node, int index, Node<T>* par){ // Recibe el nodo a eliminar, su indice en el nodo padre y el nodo padre
+        // Se definen varios nodos, el nodo a eliminar, el nodo padre y el token a eliminar
         Node<T>* remover = node;
         Node<T>* cursor = par;
         T target = cursor->item[index];
 
-        //if cursor is root, and there are no more data -> child node is to be root!
-        if(cursor == this->root && cursor->size==1){//root case
+        // CASO ESPECIAL, si el el nodo raiz tiene un TOKEN, permitido para la raiz
+        if(cursor == this->root && cursor->size==1){
+            // Reorganizamos en base a si el nodo a eliminar es el hijo izquierdo o derecho
+            /*
+                Borra los recursos del nodo a eliminar.
+                Al eliminar uno de los hijos, la raíz se queda con un solo hijo y ya no cumple 
+                con la definición de un nodo interno en un árbol B. Por lo tanto, el árbol 
+                se reestructura haciendo que el hijo restante sea la nueva raíz. 
+                El elemento de la raíz original se vuelv redundante ya que el nuevo arbol seria el hijo
+                restante y por lo tanto se elimina.
+            */
             if(remover == cursor->children[0]){
                 delete[] remover->item;
                 delete[] remover->children;
@@ -651,76 +754,95 @@ public:
             }
         }
 
-        //remove data
+        /*
+            El objetivo de este for es desplazar todos los ELEMENTOS que estan a la derecha del indice del
+            elemento a eliminar hacia la izuierda para "cerrar" el hueco que deja esa eliminacion. Se coloca
+            la posicion size-1 como 0 para representar que ahora hay un espacio al final del arreglo.
+        */
         for(int i=index; i<cursor->size-1;i++){
             cursor->item[i] = cursor->item[i+1];
         }
         cursor->item[cursor->size-1] = 0;
 
-        //remove pointer
+        // En este bucle se obtiene el indice del puntero al nodo a eliminar
         int rem_index = -1;
         for(int i=0; i<cursor->size+1;i++){
             if(cursor->children[i] == remover){
                 rem_index = i;
             }
         }
+        // Si llega a este caso no se encontro el nodo a eliminar, por lo que no se hace nada
         if(rem_index == -1){
             return;
         }
+        // Se desplazan los PUNTEROS a la izquierda para "cerrar" el hueco que deja la eliminacion, igual que antes
         for(int i=rem_index; i<cursor->size;i++){
             cursor->children[i] = cursor->children[i+1];
         }
+        // Se ajusta el ultimo puntero y se reduce el tamaño del nodo padre
         cursor->children[cursor->size] = nullptr;
         cursor->size--;
 
-        //underflow check
-        if(cursor == this->root){
+        // Verificacion de underflow, si el nodo tiene menos de la mitad de sus hijos, se debe balancear
+        if(cursor == this->root){ // En este caso termina ya que la raiz es un caso especial y puede tener menos elementos por definicion
             return;
         }
-        if(cursor->size < degree/2){//underflow case
 
+        if(cursor->size < degree/2){ // Si el nodo tiene menos de la mitad de sus hijos, se debe balancear
+
+            // Se busca el indice de los hermanos inmediatos a su izq y der (UTIL A LA HORA DE BALANCEAR)
             int sib_index =-1;
             for(int i=0; i<cursor->parent->size+1;i++){
                 if(cursor == cursor->parent->children[i]){
-                    sib_index = i;
+                    sib_index = i; // Encuentra el indice
                 }
             }
+            // Define los hermanos izq y der del nodo a eliminar
             int left=sib_index-1;
             int right=sib_index+1;
 
-            if(left >= 0){// left_sibiling exists
-                Node<T>* leftsibling= cursor->parent->children[left];
+            // Manejo de underflow en caso izquierdo
+            if(left >= 0){
+                Node<T>* leftsibling= cursor->parent->children[left]; // Dereferenciamos el hermano izquierdo
 
-                if(leftsibling->size > degree/2){ //if data number is enough to use this node
+                // Entra al if solo si el hermano puede dar un token al nodo con underflow
+                if(leftsibling->size > degree/2){
+                    // Crea un arreglo temporal que recupera el token del padre + 1 para el token que va a recibir
                     T* temp = new T[cursor->size+1];
 
-                    //copy item
+                    // Copia TODOS los items del cursor al arreglo temporal
                     for(int i=0; i<cursor->size; i++){
                         temp[i]=cursor->item[i];
                     }
 
-                    //insert and rearrange at cursor
+                    // Inserta el elemento mas a la derecha del hermano izquierdo en el arreglo temporal
                     item_insert(temp, cursor->parent->item[left],cursor->size);
                     for(int i=0; i<cursor->size+1; i++){
                         cursor->item[i] = temp[i];
                     }
+                    // Actualiza el puntero correspondiente del padre con el ultimo de leftsibling.
                     cursor->parent->item[left] = leftsibling->item[leftsibling->size-1];
                     delete[] temp;
 
+                    // REDISTRIBUCION DE PUNTEROS, se copian los elementos a un arreglo temporal
                     Node<T>** child_temp = new Node<T>*[cursor->size+2];
-                    //copy child node
                     for(int i=0; i<cursor->size+1; i++){
                         child_temp[i]=cursor->children[i];
                     }
-                    //insert and rearrange at child
+                    // Se inserta el puntero del hijo más a la derecha de leftsibling en la posición inicial de child_temp.
                     child_insert(child_temp,leftsibling->children[leftsibling->size],cursor->size,0);
 
+                    /*
+                        Cada puntero a hijo en cursor se actualiza con los valores de child_temp. 
+                        Esto es necesario porque se ha insertado un nuevo puntero a hijo (proveniente del hermano 
+                        izquierdo) al principio de los punteros de cursor.
+                    */ 
                     for(int i=0; i<cursor->size+2; i++){
                         cursor->children[i] = child_temp[i];
                     }
                     delete[] child_temp;
 
-                    //size edit
+                    // Se actualizan los tamaños para reflejar las rotaciones y balanceo
                     cursor->size++;
                     leftsibling->size--;
                     return;
@@ -779,7 +901,12 @@ public:
                     cursor->children[i] = nullptr;
                 }
                 leftsibling->size = leftsibling->size+cursor->size+1;
-                //delete recursion
+                /*
+                    En este caso recursivo se llama a la funcion de removepar para que se actualice
+                    el nodo padre en caso de necesitar balanceo ya que los merges o fusiones pueden 
+                    desencadenar mas operaciones hacia arriba en el arbol que necesitan manejarse para
+                    manetener las propiedades y el balance del arbol B.
+                */
                 Removepar(cursor, left,cursor->parent);
                 return;
 
@@ -810,7 +937,8 @@ public:
             return;
         }
     }
-    // Sin usar
+    
+    //? Funcion para limpiar un nodo del arbol con sus items e hijos.
     void clear(Node<T>* cursor){
         if(cursor != nullptr){
             if(!cursor->is_leaf){
@@ -824,11 +952,12 @@ public:
         }
     }
     
-    // Funciones para imprimir el arbol
+    //? Prints
     void bpt_print(){
         print(this->root);
     }
-    
+
+    //? Prints
     void print(Node<T>* cursor) {
         // You must NOT edit this function.
         if (cursor != NULL) {
