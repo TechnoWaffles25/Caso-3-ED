@@ -8,7 +8,7 @@ g++ -o REST.o REST.h
 
 docker run -it --rm -v "C:\Users\cococo\3erCasoED:/home" gcc bash
 
-g++ -o REST.o REST.cpp
+g++ -g -o REST.o REST.cpp
 
 ./REST.o
 
