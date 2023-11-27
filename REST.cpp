@@ -17,7 +17,10 @@ int main() {
     struct sockaddr_in serverAddress, clientAddress;
     socklen_t clientAddressLength = sizeof(clientAddress);
 
-    BHandler bHandler;
+    std::string directoryPath = "Books/";
+    BHandler bHandler(directoryPath);
+
+    BHandler bHandler;  // Asegúrate de que BHandler esté definido correctamente
 
     // Crear un socket
     serverSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -76,13 +79,14 @@ int main() {
             std::cout << "Cuerpo de la solicitud: " << requestBody << std::endl;
 
             // Buscar libros basados en la frase
-             auto resultadoBusqueda = bHandler.buscarFrase(requestBody);
+            auto libros = bHandler.buscarFrase(requestBody);
 
-            // Convertir la lista de libros a JSON
             json respuestaJson = json::array();
             for (const auto& libro : libros) {
-                respuestaJson.push_back({{"titulo", libro.titulo}, {"calificacion", libro.calificacion}});
-            }
+                json libroJson;
+                libroJson["titulo"] = libro.getTitle();
+                libroJson["calificacion"] = libro.getScore();
+                respuestaJson.push_back(libroJson);
 
             // Enviar la respuesta JSON
             std::string response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n" + respuestaJson.dump();
