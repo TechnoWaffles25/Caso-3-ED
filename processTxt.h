@@ -10,6 +10,7 @@
 #include <fstream>
 #include <stdexcept>
 #include <iostream>
+#include <unordered_map>
 
 #include "token.h"
 

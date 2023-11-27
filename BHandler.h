@@ -26,10 +26,10 @@ private:
     TextProcessing tp;
     Top10 top10;
 public:
-    BHandler(string directoryPath);{
+    BHandler(string directoryPath);
         vectorTrees = vector<BPlusTree<TokenInfo>>();
         loadBooksFromDirectory(directoryPath);
-    }
+    
 
     void setStopWords(unordered_set<string>& stopWords) {
         tp.setStopWords(stopWords);
@@ -38,7 +38,8 @@ public:
     void loadBooksFromDirectory(const string& directoryPath) {
         for (const auto& file : std::filesystem::directory_iterator(directoryPath)) {
             BPlusTree <TokenInfo> bpt(GRADO);
-            auto paragraphs = tp.tokenizeFileByParagraphs(ifstream bookFile(file.path()));
+            std::ifstream bookFile(file.path());
+            auto paragraphs = tp.tokenizeFileByParagraphs(bookFile);
             for (const auto& paragraphPair : paragraphs) {
                 for (const auto& tokenInfo : paragraphPair.second) {
                     bpt.insert(tokenInfo);

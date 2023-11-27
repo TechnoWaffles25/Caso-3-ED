@@ -5,13 +5,13 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include "B+Tree.h"
-#include "BHandler.h"
-#include "AVLTree.h"
-#include "json.hpp"
+#include "json.hpp"  // Asegúrate de incluir la biblioteca JSON
 
 using json = nlohmann::json;
 
-const int PORT = 8085;
+const int PORT = 8086;
+
+BPlusTree<string> bPlusTreeInstance;
 
 int main() {
     int serverSocket, clientSocket;
@@ -75,7 +75,7 @@ int main() {
             std::cout << "Cuerpo de la solicitud: " << requestBody << std::endl;
 
             // Buscar libros basados en la frase
-            auto libros = bPlusTreeInstance.searchAll(requestBody);  // Asumiendo que esta función existe y devuelve una lista de libros, recordar cambiar por la búsqueda real
+            auto libros = bPlusTreeInstance.searchAll(requestBody);  // Asumiendo que esta función existe y devuelve una lista de libros
 
             // Convertir la lista de libros a JSON
             json respuestaJson = json::array();
