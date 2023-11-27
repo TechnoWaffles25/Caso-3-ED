@@ -11,12 +11,12 @@ using json = nlohmann::json;
 
 const int PORT = 8086;
 
-BPlusTree<string> bPlusTreeInstance;
-
 int main() {
     int serverSocket, clientSocket;
     struct sockaddr_in serverAddress, clientAddress;
     socklen_t clientAddressLength = sizeof(clientAddress);
+
+    BHandler bHandler;
 
     // Crear un socket
     serverSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -75,7 +75,7 @@ int main() {
             std::cout << "Cuerpo de la solicitud: " << requestBody << std::endl;
 
             // Buscar libros basados en la frase
-            auto libros = bPlusTreeInstance.searchAll(requestBody);  // Asumiendo que esta función existe y devuelve una lista de libros
+             auto resultadoBusqueda = bHandler.buscarFrase(requestBody);
 
             // Convertir la lista de libros a JSON
             json respuestaJson = json::array();
