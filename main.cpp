@@ -1,6 +1,7 @@
 #include "BHandler.h"
 #include <iostream>
 
+using namespace std;
 int main() {
     // Ruta al directorio donde se encuentran los archivos de los libros
     string directoryPath = "Books/";

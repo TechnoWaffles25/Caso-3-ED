@@ -941,7 +941,7 @@ public:
     //? Funcion para limpiar un nodo del arbol con sus items e hijos.
     void clear(Node<T>* cursor){
         if(cursor != nullptr){
-            if(!cursor->is_leaf){
+            if(!&cursor->is_leaf){
                 for(int i=0; i <= cursor->size; i++){
                     clear(cursor->children[i]);
                 }
