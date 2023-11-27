@@ -12,7 +12,7 @@ g++ -o REST.o REST.cpp
 
 ./REST.o
 
-docker run -it --rm -v "C:\Users\cococo\3nuevo\Caso-3-ED:/home" -p 8086:8086 gcc bash
+docker run -it --rm -v "C:\Users\cococo\3nuevo\Caso-3-ED:/home" -p 8087:8087 gcc bash
 
 g++ REST.cpp -o REST.o -lcurl 
 
