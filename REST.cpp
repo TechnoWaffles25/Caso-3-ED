@@ -20,8 +20,6 @@ int main() {
     std::string directoryPath = "Books/";
     BHandler bHandler(directoryPath);
 
-    BHandler bHandler;  // Asegúrate de que BHandler esté definido correctamente
-
     // Crear un socket
     serverSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (serverSocket < 0) {
@@ -87,6 +85,7 @@ int main() {
                 libroJson["titulo"] = libro.getTitle();
                 libroJson["calificacion"] = libro.getScore();
                 respuestaJson.push_back(libroJson);
+            }
 
             // Enviar la respuesta JSON
             std::string response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n" + respuestaJson.dump();
